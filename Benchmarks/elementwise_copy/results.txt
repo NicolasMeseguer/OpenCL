@@ -1,0 +1,15 @@
+N = 1024 | OpenCl Execution time is: 0.000000928 seconds 
+N = 2048 | OpenCl Execution time is: 0.000001104 seconds 
+N = 4096 | OpenCl Execution time is: 0.000001088 seconds 
+N = 8192 | OpenCl Execution time is: 0.000001056 seconds 
+N = 16384 | OpenCl Execution time is: 0.000001104 seconds 
+N = 32768 | OpenCl Execution time is: 0.000001088 seconds 
+N = 65536 | OpenCl Execution time is: 0.000001072 seconds 
+N = 131072 | OpenCl Execution time is: 0.000001040 seconds 
+N = 262144 | OpenCl Execution time is: 0.000001072 seconds 
+N = 524288 | OpenCl Execution time is: 0.000001184 seconds 
+N = 1048576 | OpenCl Execution time is: 0.000001488 seconds 
+N = 2097152 | OpenCl Execution time is: 0.000002752 seconds 
+N = 4194304 | OpenCl Execution time is: 0.000004544 seconds 
+N = 8388608 | OpenCl Execution time is: 0.000008128 seconds 
+N = 16777216 | OpenCl Execution time is: 0.000017600 seconds 
