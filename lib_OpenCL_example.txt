@@ -1,0 +1,6 @@
+./home/matinraayai/.julia/artifacts/cdc2d275011023519d4ed4ab13baf3fee143c1b9/opencl/lib/libOpenCL.so
+./home/matinraayai/.julia/artifacts/abea2325876646791f831aa1b35547d4d6c90476/lib/libOpenCL.so
+./home/matinraayai/.julia/artifacts/abea2325876646791f831aa1b35547d4d6c90476/lib64/libOpenCL.so
+./home/matinraayai/.julia/artifacts/7eb8629b491dcd0b965472e463222edb02c4e352/opencl/lib/libOpenCL.so
+./opt/rocm-5.2.3/opencl/lib/libOpenCL.so
+./opt/rocm-5.2.3/lib/libOpenCL.so
