@@ -46,20 +46,20 @@ int main(int argc, char *argv[])
 	setenv("CUDA_CACHE_DISABLE", "1", 1);
 
 	// Set up OpenCL environment
-	cl_platform_id *platform;
-	cl_device_id **device_id;
-	cl_context context;
-	cl_command_queue queue;
-	cl_ulong maxAlloc, globalMemSize;
-	cl_program program;
-	cl_kernel initDoubleArrays, initFloatArrays;
-	cl_kernel elementwiseDS, elementwiseFS;
-	cl_kernel elementwiseD, elementwiseF;
-	cl_kernel elementwiseCopyDS, elementwiseCopyFS;
-	cl_kernel elementwiseCopyD, elementwiseCopyF;
-	cl_int err;
-	cl_mem device_dA, device_dB, device_dC;
-	cl_mem device_fA, device_fB, device_fC;
+	cl_platform_id    *platform;
+	cl_device_id      **device_id;
+	cl_context        context;
+	cl_command_queue  queue;
+	cl_ulong          maxAlloc, globalMemSize;
+	cl_program        program;
+	cl_kernel         initDoubleArrays, initFloatArrays;
+	cl_kernel         elementwiseDS, elementwiseFS;
+	cl_kernel         elementwiseD, elementwiseF;
+	cl_kernel         elementwiseCopyDS, elementwiseCopyFS;
+	cl_kernel         elementwiseCopyD, elementwiseCopyF;
+	cl_int            err;
+	cl_mem            device_dA, device_dB, device_dC;
+	cl_mem            device_fA, device_fB, device_fC;
 
 	if (InitialiseCLEnvironment(&platform, &device_id, &context, &queue, &program, &maxAlloc, &globalMemSize) == EXIT_FAILURE)
 	{
@@ -218,7 +218,6 @@ void RunTest(cl_command_queue *queue, cl_kernel *kernel, size_t vecWidth, char *
 
 		if (KernelStrideIdx != -1)
 		{
-			// Since we are using a strided kernel, we need to pass the globalSize to the kernel each iteration.
 			globalSize = CU * WFP * localSize;
 			err = clSetKernelArg(*kernel, KernelStrideIdx, sizeof(unsigned long), &globalSize);
 		}
@@ -226,7 +225,7 @@ void RunTest(cl_command_queue *queue, cl_kernel *kernel, size_t vecWidth, char *
 		if (globalSize % localSize != 0)
 		{
 			printf("Error, localSize must divide globalSize! (%zu %% %zu = %zu)\n",
-				   globalSize, localSize, globalSize % localSize);
+			globalSize, localSize, globalSize % localSize);
 		}
 
 		double time = GetWallTime();
