@@ -5,21 +5,7 @@
 #include <CL/opencl.h>
 
 // OpenCL kernel. Each work item takes care of one element of c
-const char *kernelSource =
-"__kernel                                                         \n"
-"void elementwise( __global const float *a,                       \n"
-"                  __global const float *b,                       \n"
-"                  __global float *out,                           \n"
-"                  ulong stride,                                  \n"
-"                  ulong vector_length)                           \n"
-"{                                                                \n"
-"    __private unsigned long idx =                                \n"
-"        (get_local_size(0) * get_group_id(0)) + get_local_id(0); \n"
-"                                                                 \n"
-"    for (; idx < vector_length; idx += stride) {                 \n"
-"        out[idx] = a[idx] * b[idx];                              \n"
-"    }                                                            \n"
-"}                                                                \n";
+const char *kernelFileName = "kernel.cl";
  
 int main( int argc, char* argv[] )
 {
@@ -84,6 +70,16 @@ int main( int argc, char* argv[] )
  
     // Number of total work items - CUs * WavefrontPoolSize * WorkgroupSize
     globalSize = 120 * 40 * localSize;
+
+    // Get Kernel from file
+    FILE* kernelFile = fopen(kernelFileName, "rb");
+	fseek(kernelFile, 0, SEEK_END);
+	long fileLength = ftell(kernelFile);
+	rewind(kernelFile);
+	char *kernelSource = malloc(fileLength*sizeof(char));
+	long read = fread(kernelSource, sizeof(char), fileLength, kernelFile);
+	if (fileLength != read) printf("Error reading kernel file, line %d\n", __LINE__);
+	fclose(kernelFile);
  
     // Bind to platform
     err = clGetPlatformIDs(1, &cpPlatform, NULL);
@@ -105,7 +101,7 @@ int main( int argc, char* argv[] )
                             (const char **) & kernelSource, NULL, &err);
  
     // Build the program executable 
-    err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    err = clBuildProgram(program, 0, NULL, "-I.", NULL, NULL);
  
     // Create the compute kernel in the program we wish to run
     kernel = clCreateKernel(program, "elementwise", &err);
@@ -185,6 +181,7 @@ int main( int argc, char* argv[] )
     free(h_a);
     free(h_b);
     free(h_out);
+    free(kernelSource);
  
     return 0;
 }
