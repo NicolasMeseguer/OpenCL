@@ -21,7 +21,7 @@
 // Function prototypes
 double GetWallTime(void);
 void RunTest(cl_command_queue * queue, cl_kernel * kernel, size_t vecWidth, char * testName, int memops, int flops, size_t arraySize);
-void VerifyResults(cl_command_queue * queue, cl_mem * device_A, double scalar, size_t arraySize);
+void VerifyResults(cl_command_queue * queue, cl_mem * device_A, float scalar, size_t arraySize);
 
 // OpenCL Stuff
 int InitialiseCLEnvironment(cl_platform_id**, cl_device_id***, cl_context*, cl_command_queue*, cl_program*, cl_ulong*, cl_ulong*);
@@ -84,19 +84,19 @@ int main(void) {
 	CheckOpenCLError(err, __LINE__);
 
 	// Allocate device memory
-	size_t sizeBytes = TRYARRAYSIZE * sizeof(double);
+	size_t sizeBytes = TRYARRAYSIZE * sizeof(float);
 	if (sizeBytes > maxAlloc) sizeBytes = maxAlloc;
 	while (3*sizeBytes > globalMemSize) {
 		printf("Adjusting array size from %zuMB to %zuMB\n", sizeBytes, sizeBytes/2);
 		sizeBytes /= 2;
 	}
 	// Ensure new array size is a multiple of 256, the largest local workgroup size tested
-	size_t arraySize = sizeBytes/sizeof(double);
+	size_t arraySize = sizeBytes/sizeof(float);
 	if ( arraySize % 256 != 0) {
 		// round down to multiple of 256
-		printf("Adjusting array size from %zuMB to %zuMB\n", arraySize*sizeof(double), ((arraySize/256)*256)*sizeof(double));
+		printf("Adjusting array size from %zuMB to %zuMB\n", arraySize*sizeof(float), ((arraySize/256)*256)*sizeof(float));
 		arraySize = (arraySize/256)*256;
-		sizeBytes = arraySize*sizeof(double);
+		sizeBytes = arraySize*sizeof(float);
 	}
 	device_A = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeBytes, NULL, &err);
 	device_B = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeBytes, NULL, &err);
@@ -104,7 +104,7 @@ int main(void) {
 	CheckOpenCLError(err, __LINE__);
 
 	// Set kernel arguemnts. Scale and Triad kernels involve multiplication by a scalar:
-	const double scalar = 3.0;
+	const float scalar = 3.0f;
 
 	err  = clSetKernelArg(initialiseArraysKernel, 0, sizeof(cl_mem), &device_A);
 	err |= clSetKernelArg(initialiseArraysKernel, 1, sizeof(cl_mem), &device_B);
@@ -121,19 +121,19 @@ int main(void) {
 	err |= clSetKernelArg(copyKernel16, 0, sizeof(cl_mem), &device_A);
 	err |= clSetKernelArg(copyKernel16, 1, sizeof(cl_mem), &device_C);
 
-	err |= clSetKernelArg(scaleKernel1, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(scaleKernel1, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(scaleKernel1, 1, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(scaleKernel1, 2, sizeof(cl_mem), &device_C);
-	err |= clSetKernelArg(scaleKernel2, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(scaleKernel2, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(scaleKernel2, 1, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(scaleKernel2, 2, sizeof(cl_mem), &device_C);
-	err |= clSetKernelArg(scaleKernel4, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(scaleKernel4, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(scaleKernel4, 1, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(scaleKernel4, 2, sizeof(cl_mem), &device_C);
-	err |= clSetKernelArg(scaleKernel8, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(scaleKernel8, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(scaleKernel8, 1, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(scaleKernel8, 2, sizeof(cl_mem), &device_C);
-	err |= clSetKernelArg(scaleKernel16, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(scaleKernel16, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(scaleKernel16, 1, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(scaleKernel16, 2, sizeof(cl_mem), &device_C);
 
@@ -153,23 +153,23 @@ int main(void) {
 	err |= clSetKernelArg(addKernel16, 1, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(addKernel16, 2, sizeof(cl_mem), &device_C);
 
-	err |= clSetKernelArg(triadKernel1, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(triadKernel1, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(triadKernel1, 1, sizeof(cl_mem), &device_A);
 	err |= clSetKernelArg(triadKernel1, 2, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(triadKernel1, 3, sizeof(cl_mem), &device_C);
-	err |= clSetKernelArg(triadKernel2, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(triadKernel2, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(triadKernel2, 1, sizeof(cl_mem), &device_A);
 	err |= clSetKernelArg(triadKernel2, 2, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(triadKernel2, 3, sizeof(cl_mem), &device_C);
-	err |= clSetKernelArg(triadKernel4, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(triadKernel4, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(triadKernel4, 1, sizeof(cl_mem), &device_A);
 	err |= clSetKernelArg(triadKernel4, 2, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(triadKernel4, 3, sizeof(cl_mem), &device_C);
-	err |= clSetKernelArg(triadKernel8, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(triadKernel8, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(triadKernel8, 1, sizeof(cl_mem), &device_A);
 	err |= clSetKernelArg(triadKernel8, 2, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(triadKernel8, 3, sizeof(cl_mem), &device_C);
-	err |= clSetKernelArg(triadKernel16, 0, sizeof(double), &scalar);
+	err |= clSetKernelArg(triadKernel16, 0, sizeof(float), &scalar);
 	err |= clSetKernelArg(triadKernel16, 1, sizeof(cl_mem), &device_A);
 	err |= clSetKernelArg(triadKernel16, 2, sizeof(cl_mem), &device_B);
 	err |= clSetKernelArg(triadKernel16, 3, sizeof(cl_mem), &device_C);
@@ -256,31 +256,31 @@ void RunTest(cl_command_queue * queue, cl_kernel * kernel, size_t vecWidth, char
 
 #ifdef VERBOSE
 		printf("------------- localSize = %3zu, bandwidth = %7.3lf GB/s\n",
-		        localSize, memops*NTIMES*arraySize*sizeof(double)/1024.0/1024.0/1024.0/(time));
+		        localSize, memops*NTIMES*arraySize*sizeof(float)/1024.0/1024.0/1024.0/(time));
 #endif
 
 	}
 
 	printf("%13s   %14.3lf   %8.6lf   %8.6lf   %8.6lf   %19zu   %11.3lf\n",
-	       testName, memops*NTIMES*arraySize*sizeof(double)/1024.0/1024.0/1024.0/bestTime, totalTime/NTIMES,
+	       testName, memops*NTIMES*arraySize*sizeof(float)/1024.0/1024.0/1024.0/bestTime, totalTime/NTIMES,
 	       bestTime, worstTime, bestLocalSize, flops*NTIMES*arraySize/1.0e9/bestTime);
 }
 
 
 
-void VerifyResults(cl_command_queue *queue, cl_mem *device_A, double scalar, size_t arraySize)
+void VerifyResults(cl_command_queue *queue, cl_mem *device_A, float scalar, size_t arraySize)
 {
 	// Triad puts final values in array A, so retrieve it from the card. Allocate memory to recieve:
-	size_t sizeBytes = arraySize * sizeof(double);
-	double *checkA;
+	size_t sizeBytes = arraySize * sizeof(float);
+	float *checkA;
 	checkA = malloc(sizeBytes);
 	clEnqueueReadBuffer(*queue, *device_A, CL_TRUE, 0, sizeBytes, checkA, 0, NULL, NULL);
 
 	// Unlike the original stream benchmark, we don't interleave the functions.
 	// The initial values were: a = 1.0, b = 2.0, c = 0.0.
-	double a = 1.0;
-	double b = 2.0;
-	double c = 0.0;
+	float a = 1.0f;
+	float b = 2.0f;
+	float c = 0.0f;
 	// Copy
 	c = a;
 	b = scalar*c;
