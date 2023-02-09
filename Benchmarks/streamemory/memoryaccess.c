@@ -21,7 +21,7 @@ const char *kernelFileName = "kernels.cl";
 #define TRYARRAYSIZE (163840 * 8 * 8 * 8)
 
 // AMD MI100 Specs, used for the stride benchmarks
-#define CU 64
+#define CU 120
 #define WFP 40
 
 // For fast executions you can auto-select the device and platform and skip the scanf

@@ -5,6 +5,10 @@
 Auto-selecting platform 0.
 Auto-selecting device 0.
 
+Vector Size       --- 8388608 - (163840 * 8 * 8 * 8)
+NTIMES            --- 10
+startingLocalSize --- 16
+maxLocalSize      --- 256
 ---------------------------------------------------------------------------------------------------
 Function        Best Rate GB/s   Avg time   Min time   Max time   Best Workgroup Size   Best GFLOPS
 ---------------------------------------------------------------------------------------------------
