@@ -118,3 +118,83 @@ __kernel void elementwiseCopyFloat(__global const float *A,
 
   C[tid] = A[tid];
 }
+
+// CopyKernel with Double Precision
+__kernel void copyKernelDouble(__global const double * restrict A,
+                               __global double * restrict C)
+{
+	size_t tid = get_global_id(0);
+
+	C[tid] = A[tid];
+}
+
+// CopyKernel with Single Precision
+__kernel void copyKernelFloat(__global const float * restrict A,
+                              __global float * restrict C)
+{
+	size_t tid = get_global_id(0);
+
+	C[tid] = A[tid];
+}
+
+// ScaleKernel with Double Precision
+__kernel void scaleKernelDouble(__global double * restrict B,
+                                __global const double * restrict C,
+                                const double scalar)
+{
+	size_t tid = get_global_id(0);
+
+	B[tid] = scalar*C[tid];
+}
+
+// ScaleKernel with Single Precision
+__kernel void scaleKernelFloat(__global float * restrict B,
+                               __global const float * restrict C,
+                               const float scalar)
+{
+	size_t tid = get_global_id(0);
+
+	B[tid] = scalar*C[tid];
+}
+
+// AddKernel with Double Precision
+__kernel void addKernelDouble(__global const double * restrict A,
+                              __global const double * restrict B,
+                              __global double * restrict C)
+{
+	size_t tid = get_global_id(0);
+
+	C[tid] = A[tid] + B[tid];
+}
+
+// AddKernel with Single Precision
+__kernel void addKernelFloat(__global const float * restrict A,
+                              __global const float * restrict B,
+                              __global float * restrict C)
+{
+	size_t tid = get_global_id(0);
+
+	C[tid] = A[tid] + B[tid];
+}
+
+// TriadKernel with Double Precision
+__kernel void triadKernelDouble(__global double * restrict A,
+                                __global const double * restrict B,
+                                __global const double * restrict C,
+                                const double scalar)
+{
+	size_t tid = get_global_id(0);
+
+	A[tid] = B[tid]+scalar * C[tid];
+}
+
+// TriadKernel with Single Precision
+__kernel void triadKernelFloat(__global float * restrict A,
+                               __global const float * restrict B,
+                               __global const float * restrict C,
+                               const float scalar)
+{
+	size_t tid = get_global_id(0);
+
+	A[tid] = B[tid]+scalar * C[tid];
+}

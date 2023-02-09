@@ -10,10 +10,10 @@
 
 // Array size for tests. Needs to be big to sufficiently load device.
 // Must be divisible by 16 (the largest vector type) and 256 (the largest local workgroup size tested)
-#define TRYARRAYSIZE (0.5 * 1024*1024*1024/8)
+#define TRYARRAYSIZE (163840 * 8 * 8 * 8)
 
 // Number of times to run tests
-#define NTIMES 50
+#define NTIMES 10
 
 // Print per-local-size results during test?
 //#define VERBOSE
@@ -200,11 +200,11 @@ int main(void) {
 	RunTest(&queue, &scaleKernel8,  8,  "scaleKernel8",  2, 1, arraySize);
 	RunTest(&queue, &scaleKernel16, 16, "scaleKernel16", 2, 1, arraySize);
 	printf("---------------------------------------------------------------------------------------------------\n");
-	RunTest(&queue, &addKernel1,  1,  "addKernel1",  2, 1, arraySize);
-	RunTest(&queue, &addKernel2,  2,  "addKernel2",  2, 1, arraySize);
-	RunTest(&queue, &addKernel4,  4,  "addKernel4",  2, 1, arraySize);
-	RunTest(&queue, &addKernel8,  8,  "addKernel8",  2, 1, arraySize);
-	RunTest(&queue, &addKernel16, 16, "addKernel16", 2, 1, arraySize);
+	RunTest(&queue, &addKernel1,  1,  "addKernel1",  3, 1, arraySize);
+	RunTest(&queue, &addKernel2,  2,  "addKernel2",  3, 1, arraySize);
+	RunTest(&queue, &addKernel4,  4,  "addKernel4",  3, 1, arraySize);
+	RunTest(&queue, &addKernel8,  8,  "addKernel8",  3, 1, arraySize);
+	RunTest(&queue, &addKernel16, 16, "addKernel16", 3, 1, arraySize);
 	printf("---------------------------------------------------------------------------------------------------\n");
 	RunTest(&queue, &triadKernel1,  1,  "triadKernel1",  3, 2, arraySize);
 	RunTest(&queue, &triadKernel2,  2,  "triadKernel2",  3, 2, arraySize);
@@ -229,7 +229,7 @@ void RunTest(cl_command_queue * queue, cl_kernel * kernel, size_t vecWidth, char
 	int err;
 
 	// Test local sizes from 2 to to 256, in powers of 2
-	for (localSize = 1; localSize <= 256; localSize *= 2) {
+	for (localSize = 16; localSize <= 256; localSize *= 2) {
 
 		if (globalSize % localSize != 0) {
 			printf("Error, localSize must divide globalSize! (%zu %% %zu = %zu)\n",

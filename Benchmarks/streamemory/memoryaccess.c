@@ -13,14 +13,15 @@
 const char *kernelFileName = "kernels.cl";
 
 // Number of times to run tests
-#define NTIMES 50
+#define NTIMES 10
 
 // MAX array size for tests. Needs to be big to sufficiently load device.
 // Must be divisible by WGSIZE
-#define TRYARRAYSIZE (1 * 1024 * 1024 * 1024 / 8)
+// This is the maximum size tested on MGPUSim.
+#define TRYARRAYSIZE (163840 * 8 * 8 * 8)
 
 // AMD MI100 Specs, used for the stride benchmarks
-#define CU 120
+#define CU 64
 #define WFP 40
 
 // For fast executions you can auto-select the device and platform and skip the scanf
@@ -32,8 +33,9 @@ const char *kernelFileName = "kernels.cl";
 
 // Function prototypes
 double GetWallTime(void);
-void RunTest(cl_command_queue *queue, cl_kernel *kernel, size_t vecWidth, char *testName, int memops, int flops, size_t arraySize, int strideBool);
+void RunTest(cl_command_queue *queue, cl_kernel *kernel, size_t vecWidth, char *testName, int memops, int flops, size_t arraySize, int strideBool, size_t dataType);
 void SanitizeAndRoundArraySize(size_t *sizeBytes, cl_ulong maxAlloc, cl_ulong globalMemSize, size_t typeSize, size_t *arraySize, char *arrayName);
+void initializeArays(cl_command_queue *queue, cl_kernel *initDoublesKernel, cl_kernel *initFloatsKernel, size_t *arraySize);
 
 // OpenCL Stuff
 int InitialiseCLEnvironment(cl_platform_id **, cl_device_id ***, cl_context *, cl_command_queue *, cl_program *, cl_ulong *, cl_ulong *);
@@ -57,6 +59,10 @@ int main(int argc, char *argv[])
 	cl_kernel         elementwiseD, elementwiseF;
 	cl_kernel         elementwiseCopyDS, elementwiseCopyFS;
 	cl_kernel         elementwiseCopyD, elementwiseCopyF;
+	cl_kernel         copyKernelD, copyKernelF;
+	cl_kernel         scaleKernelD, scaleKernelF;
+	cl_kernel         addKernelD, addKernelF;
+	cl_kernel         triadKernelD, triadKernelF;
 	cl_int            err;
 	cl_mem            device_dA, device_dB, device_dC;
 	cl_mem            device_fA, device_fB, device_fC;
@@ -94,6 +100,25 @@ int main(int argc, char *argv[])
 	elementwiseCopyF = clCreateKernel(program, "elementwiseCopyFloat", &err);
 	CheckOpenCLError(err, __LINE__);
 
+	// For the streaming benchmark we implement the 4 different kernels using different data types
+	// ├> copykernelDouble and copyKernelFloat
+	// ├> scaleKernelDouble and scaleKernelFloat
+	// ├> addKernelDouble and addKernelFloat
+	// └> triadKernelDouble and triadKernelFloat
+
+	copyKernelD = clCreateKernel(program, "copyKernelDouble", &err);
+	copyKernelF = clCreateKernel(program, "copyKernelFloat", &err);
+	CheckOpenCLError(err, __LINE__);
+	scaleKernelD = clCreateKernel(program, "scaleKernelDouble", &err);
+	scaleKernelF = clCreateKernel(program, "scaleKernelFloat", &err);
+	CheckOpenCLError(err, __LINE__);
+	addKernelD = clCreateKernel(program, "addKernelDouble", &err);
+	addKernelF = clCreateKernel(program, "addKernelFloat", &err);
+	CheckOpenCLError(err, __LINE__);
+	triadKernelD = clCreateKernel(program, "triadKernelDouble", &err);
+	triadKernelF = clCreateKernel(program, "triadKernelFloat", &err);
+	CheckOpenCLError(err, __LINE__);
+
 	// If the user inputs a size, it will be used. Otherwise, the default size is used.
 	size_t arraySize = TRYARRAYSIZE;
 	if (argc == 2 && atoi(argv[1]) > 256 && atoi(argv[1]) % 16 == 0)
@@ -120,6 +145,10 @@ int main(int argc, char *argv[])
 	device_fA = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeBytesFloat, NULL, &err);
 	device_fB = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeBytesFloat, NULL, &err);
 	device_fC = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeBytesFloat, NULL, &err);
+
+	// Set kernel arguemnts. Scale and Triad kernels involve multiplication by a scalar:
+	const double scalarD = 3.0;
+	const float scalarF = 3.0f;
 
 	// Assign variables to different kernels
 	// initialiseDoubleArraysKernel
@@ -172,39 +201,87 @@ int main(int argc, char *argv[])
 	err |= clSetKernelArg(elementwiseCopyF, 0, sizeof(cl_mem), &device_fA);
 	err |= clSetKernelArg(elementwiseCopyF, 1, sizeof(cl_mem), &device_fC);
 
+	// copyKernelDouble
+	err |= clSetKernelArg(copyKernelD, 0, sizeof(cl_mem), &device_dA);
+	err |= clSetKernelArg(copyKernelD, 1, sizeof(cl_mem), &device_dC);
+
+	//copyKernelFloat
+	err |= clSetKernelArg(copyKernelF, 0, sizeof(cl_mem), &device_fA);
+	err |= clSetKernelArg(copyKernelF, 1, sizeof(cl_mem), &device_fC);
+
+	// scaleKernelDouble
+	err |= clSetKernelArg(scaleKernelD, 0, sizeof(cl_mem), &device_dB);
+	err |= clSetKernelArg(scaleKernelD, 1, sizeof(cl_mem), &device_dC);
+	err |= clSetKernelArg(scaleKernelD, 2, sizeof(double), &scalarD);
+
+	// scaleKernelFloat
+	err |= clSetKernelArg(scaleKernelF, 0, sizeof(cl_mem), &device_fB);
+	err |= clSetKernelArg(scaleKernelF, 1, sizeof(cl_mem), &device_fC);
+	err |= clSetKernelArg(scaleKernelF, 2, sizeof(float), &scalarF);
+
+	// addKernelDouble
+	err |= clSetKernelArg(addKernelD, 0, sizeof(cl_mem), &device_dA);
+	err |= clSetKernelArg(addKernelD, 1, sizeof(cl_mem), &device_dB);
+	err |= clSetKernelArg(addKernelD, 2, sizeof(cl_mem), &device_dC);
+
+	// addKernelFloat
+	err |= clSetKernelArg(addKernelF, 0, sizeof(cl_mem), &device_fA);
+	err |= clSetKernelArg(addKernelF, 1, sizeof(cl_mem), &device_fB);
+	err |= clSetKernelArg(addKernelF, 2, sizeof(cl_mem), &device_fC);
+
+	// triadKernelDouble
+	err |= clSetKernelArg(triadKernelD, 0, sizeof(cl_mem), &device_dA);
+	err |= clSetKernelArg(triadKernelD, 1, sizeof(cl_mem), &device_dB);
+	err |= clSetKernelArg(triadKernelD, 2, sizeof(cl_mem), &device_dC);
+	err |= clSetKernelArg(triadKernelD, 3, sizeof(double), &scalarD);
+
+	// triadKernelFloat
+	err |= clSetKernelArg(triadKernelF, 0, sizeof(cl_mem), &device_fA);
+	err |= clSetKernelArg(triadKernelF, 1, sizeof(cl_mem), &device_fB);
+	err |= clSetKernelArg(triadKernelF, 2, sizeof(cl_mem), &device_fC);
+	err |= clSetKernelArg(triadKernelF, 3, sizeof(float), &scalarF);
+
 	CheckOpenCLError(err, __LINE__);
 
 	// Initialize arrays
-	size_t initLocalSize = 64;
-	size_t initGlobalSize = arraySize;
-	err = clEnqueueNDRangeKernel(queue, initDoubleArrays, 1, NULL, &initGlobalSize, &initLocalSize, 0, NULL, NULL);
-	err = clEnqueueNDRangeKernel(queue, initFloatArrays, 1, NULL, &initGlobalSize, &initLocalSize, 0, NULL, NULL);
-	clFinish(queue);
+	initializeArays(&queue, &initDoubleArrays, &initFloatArrays, &arraySize);
 
 	// Fourth argument is the number of memory operations per output array item. Used in bandwidth calculation.
 	// Fifth argument is the number of flops per output array item. Used in flops calculation.
-	// Seventh argument indicates if the kernel is a strided kernel, and copy the wgsize to the kernel each iteration.
+	// Seventh argument indicates kernel strie idx, and copies the wgsize to the kernel before enqueuing.
 	printf("--------------------------------------------------------------------------------------------------------\n");
 	printf("Function             Best Rate GB/s   Avg time   Min time   Max time   Best Workgroup Size   Best GFLOPS\n");
 	printf("--------------------------------------------------------------------------------------------------------\n");
-	RunTest(&queue, &elementwiseDS, 1, "elementwiseDS", 3, 1, arraySize, 3);
-	RunTest(&queue, &elementwiseFS, 1, "elementwiseFS", 3, 1, arraySize, 3);
+	RunTest(&queue, &elementwiseDS, 1, "elementwiseDS", 3, 1, arraySize, 3, sizeof(double));
+	RunTest(&queue, &elementwiseFS, 1, "elementwiseFS", 3, 1, arraySize, 3, sizeof(float));
 	printf("--------------------------------------------------------------------------------------------------------\n");
-	RunTest(&queue, &elementwiseD, 1, "elementwiseD", 3, 1, arraySize, -1);
-	RunTest(&queue, &elementwiseF, 1, "elementwiseF", 3, 1, arraySize, -1);
+	RunTest(&queue, &elementwiseD, 1, "elementwiseD", 3, 1, arraySize, -1, sizeof(double));
+	RunTest(&queue, &elementwiseF, 1, "elementwiseF", 3, 1, arraySize, -1, sizeof(float));
 	printf("--------------------------------------------------------------------------------------------------------\n");
-	RunTest(&queue, &elementwiseCopyDS, 1, "elementwiseCopyDS", 2, 0, arraySize, 2);
-	RunTest(&queue, &elementwiseCopyFS, 1, "elementwiseCopyFS", 2, 0, arraySize, 2);
+	RunTest(&queue, &elementwiseCopyDS, 1, "elementwiseCopyDS", 2, 0, arraySize, 2, sizeof(double));
+	RunTest(&queue, &elementwiseCopyFS, 1, "elementwiseCopyFS", 2, 0, arraySize, 2, sizeof(float));
 	printf("--------------------------------------------------------------------------------------------------------\n");
-	RunTest(&queue, &elementwiseCopyD, 1, "elementwiseCopyD", 2, 0, arraySize, -1);
-	RunTest(&queue, &elementwiseCopyF, 1, "elementwiseCopyF", 2, 0, arraySize, -1);
+	RunTest(&queue, &elementwiseCopyD, 1, "elementwiseCopyD", 2, 0, arraySize, -1, sizeof(double));
+	RunTest(&queue, &elementwiseCopyF, 1, "elementwiseCopyF", 2, 0, arraySize, -1, sizeof(float));
+	printf("--------------------------------------------------------------------------------------------------------\n");
+	RunTest(&queue, &copyKernelD, 1, "copyKernelD", 2, 0, arraySize, -1, sizeof(double));
+	RunTest(&queue, &copyKernelF, 1, "copyKernelF", 2, 0, arraySize, -1, sizeof(float));
+	printf("--------------------------------------------------------------------------------------------------------\n");
+	RunTest(&queue, &scaleKernelD, 1, "scaleKernelD", 2, 1, arraySize, -1, sizeof(double));
+	RunTest(&queue, &scaleKernelF, 1, "scaleKernelF", 2, 1, arraySize, -1, sizeof(float));
+	printf("--------------------------------------------------------------------------------------------------------\n");
+	RunTest(&queue, &addKernelD, 1, "addKernelD", 3, 1, arraySize, -1, sizeof(double));
+	RunTest(&queue, &addKernelF, 1, "addKernelF", 3, 1, arraySize, -1, sizeof(float));
+	printf("--------------------------------------------------------------------------------------------------------\n");
+	RunTest(&queue, &triadKernelD, 1, "triadKernelD", 3, 2, arraySize, -1, sizeof(double));
+	RunTest(&queue, &triadKernelF, 1, "triadKernelF", 3, 2, arraySize, -1, sizeof(float));
 	printf("--------------------------------------------------------------------------------------------------------\n");
 
 	CleanUpCLEnvironment(&platform, &device_id, &context, &queue, &program);
 	return 0;
 }
 
-void RunTest(cl_command_queue *queue, cl_kernel *kernel, size_t vecWidth, char *testName, int memops, int flops, size_t arraySize, int KernelStrideIdx)
+void RunTest(cl_command_queue *queue, cl_kernel *kernel, size_t vecWidth, char *testName, int memops, int flops, size_t arraySize, int KernelStrideIdx, size_t dataType)
 {
 	size_t localSize;
 	size_t bestLocalSize;
@@ -213,7 +290,7 @@ void RunTest(cl_command_queue *queue, cl_kernel *kernel, size_t vecWidth, char *
 	int err;
 
 	// Test local sizes from 2 to to 256, in powers of 2
-	for (localSize = 1; localSize <= 256; localSize *= 2)
+	for (localSize = 16; localSize <= 256; localSize *= 2)
 	{
 
 		if (KernelStrideIdx != -1)
@@ -256,8 +333,21 @@ void RunTest(cl_command_queue *queue, cl_kernel *kernel, size_t vecWidth, char *
 	}
 
 	printf("%18s   %14.3lf   %8.6lf   %8.6lf   %8.6lf   %19zu   %11.3lf\n",
-		   testName, memops * NTIMES * arraySize * sizeof(float) / 1024.0 / 1024.0 / 1024.0 / bestTime, totalTime / NTIMES,
+		   testName, memops * NTIMES * arraySize * dataType / 1024.0 / 1024.0 / 1024.0 / bestTime, totalTime / NTIMES,
 		   bestTime, worstTime, bestLocalSize, flops * NTIMES * arraySize / 1.0e9 / bestTime);
+}
+
+void initializeArays(cl_command_queue *queue, cl_kernel *initDoublesKernel, cl_kernel *initFloatsKernel, size_t *arraySize)
+{
+	size_t initLocalSize = 64;
+	size_t initGlobalSize = *arraySize;
+	int err;
+
+	err = clEnqueueNDRangeKernel(*queue, *initDoublesKernel, 1, NULL, &initGlobalSize, &initLocalSize, 0, NULL, NULL);
+	err = clEnqueueNDRangeKernel(*queue, *initFloatsKernel, 1, NULL, &initGlobalSize, &initLocalSize, 0, NULL, NULL);
+	clFinish(*queue);
+
+	CheckOpenCLError(err, __LINE__);
 }
 
 // Return ns accurate walltime
